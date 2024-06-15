@@ -4,10 +4,76 @@
  */
 
 const deployedContracts = {
-  devnet: {
+  sepolia: {
+    PragmaPrice: {
+      address:
+        "0x063634206ffbffad12e14cfeda0817d0d2888f04b4cf8431bc904539e98e4218",
+      abi: [
+        {
+          type: "impl",
+          name: "PragmaImpl",
+          interface_name: "contracts::cryptos::PragmaPrice::IPragmaPrice",
+        },
+        {
+          type: "enum",
+          name: "pragma_lib::types::DataType",
+          variants: [
+            {
+              name: "SpotEntry",
+              type: "core::felt252",
+            },
+            {
+              name: "FutureEntry",
+              type: "(core::felt252, core::integer::u64)",
+            },
+            {
+              name: "GenericEntry",
+              type: "core::felt252",
+            },
+          ],
+        },
+        {
+          type: "interface",
+          name: "contracts::cryptos::PragmaPrice::IPragmaPrice",
+          items: [
+            {
+              type: "function",
+              name: "get_asset_price_median",
+              inputs: [
+                {
+                  name: "oracle_address",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "asset",
+                  type: "pragma_lib::types::DataType",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u128",
+                },
+              ],
+              state_mutability: "view",
+            },
+          ],
+        },
+        {
+          type: "constructor",
+          name: "constructor",
+          inputs: [],
+        },
+        {
+          type: "event",
+          name: "contracts::cryptos::PragmaPrice::PragmaPrice::Event",
+          kind: "enum",
+          variants: [],
+        },
+      ],
+    },
     StarkPrice: {
       address:
-        "0x048a8e979997cd8179b5c30931e12754cc5346cf4131628509de76afc66d0e93",
+        "0x06cb64f38e0866cf20769be784be7a81829689d5bac2773393cefe0f65971e9a",
       abi: [
         {
           type: "impl",
@@ -34,7 +100,7 @@ const deployedContracts = {
     },
     BitcoinPrice: {
       address:
-        "0x00f506a6d508cbbf05c9820d3dfcec7843b63d84032d2247afb5bdadcd6ea3af",
+        "0x02ab70357289ad72a2422aed5bafc30c89cdcfd5ba494c1fd769d11451a6c93c",
       abi: [
         {
           type: "impl",
@@ -61,7 +127,7 @@ const deployedContracts = {
     },
     EtherPrice: {
       address:
-        "0x03efb75cdfbbaf34408e66ec588b61c526cf63c11dbd472efb70c2462f7f0792",
+        "0x00c22a5b2a10b5f188c0d03b66625bb08920392e87607532a46f9dcc853e48e8",
       abi: [
         {
           type: "impl",

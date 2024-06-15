@@ -7,6 +7,7 @@ const deployScript = async (): Promise<void> => {
   //    },
   //    "YourContract"
   //  );
+  await deployContract(null, "PragmaPrice");
   await deployContract(null, "StarkPrice");
   await deployContract(null, "BitcoinPrice");
   await deployContract(null, "EtherPrice");

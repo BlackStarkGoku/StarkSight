@@ -10,7 +10,7 @@ pub trait IPragmaPrice<TContractState> {
     fn get_asset_price_median(self: @TContractState, oracle_address: ContractAddress, asset : DataType) -> u128;
 }
 
-#[starknet::contract]
+#[starknet::component]
 pub mod PragmaPrice {
     use super::IPragmaPrice;
     use super::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait};
@@ -19,15 +19,19 @@ pub mod PragmaPrice {
     use super::contract_address_const;
 
     #[storage]
-    struct Storage {}
-
-    #[constructor]
-    fn constructor(ref self: ContractState) {  
+    struct Storage {
     }
 
-    #[abi(embed_v0)]
-    impl PragmaImpl of IPragmaPrice<ContractState> {
-        fn get_asset_price_median(self: @ContractState, oracle_address: ContractAddress, asset : DataType) -> u128  { 
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    pub enum Event {
+    }
+
+    #[embeddable_as(PragmaPriceImpl)]
+    impl PragmaImpl<
+        TContractState, +HasComponent<TContractState>
+    > of super::IPragmaPrice<ComponentState<TContractState>> {
+        fn get_asset_price_median(self: @ComponentState<TContractState>, oracle_address: ContractAddress, asset : DataType) -> u128  { 
             let oracle_dispatcher = IPragmaABIDispatcher{contract_address : oracle_address};
             let output : PragmaPricesResponse= oracle_dispatcher.get_data(asset, AggregationMode::Median(()));
             return output.price;

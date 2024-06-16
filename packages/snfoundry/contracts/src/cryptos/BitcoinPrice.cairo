@@ -21,18 +21,48 @@ pub trait IBitcoinPrice<TContractState> {
     fn get_current_bet(self: @TContractState) -> BetInfos;
     fn get_own_yes_amount(self: @TContractState) -> u256;
     fn get_own_no_amount(self: @TContractState) -> u256;
+    fn claimRewards(ref self: TContractState) -> u256;
+    // TODO: owner claim balance of contract
+    // TODO: owner set new bet
 }
 
 #[starknet::contract]
 pub mod BitcoinPrice {
-    use super::IBitcoinPrice;
+    use contracts::cryptos::PragmaPrice::IPragmaPrice;
+use super::IBitcoinPrice;
     use starknet::ContractAddress;
+    use openzeppelin::access::ownable::OwnableComponent;
+    use contracts::cryptos::PragmaPrice::PragmaPrice as PragmaPriceComponent;
     use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDispatcherTrait};
     use starknet::{get_caller_address, get_contract_address, get_block_timestamp};
+    use pragma_lib::types::{AggregationMode, DataType, PragmaPricesResponse};
     use super::BetInfos;
+    
+    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+    component!(path: PragmaPriceComponent, storage: pragma, event: PragmaPriceEvent);
 
+    #[abi(embed_v0)]
+    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
+    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl PragmaPriceImpl = PragmaPriceComponent::PragmaPriceImpl<ContractState>;
+
+    
     const ETH_CONTRACT_ADDRESS: felt252 =
         0x49D36570D4E46F48E99674BD3FCC84644DDD6B96F7C741B1562B82F9E004DC7;
+
+    const KEY :felt252 = 18669995996566340;
+    
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        #[flat]
+        OwnableEvent: OwnableComponent::Event,
+        #[flat]
+        PragmaPriceEvent: PragmaPriceComponent::Event,
+    }
+
 
     #[storage]
     struct Storage {
@@ -41,15 +71,22 @@ pub mod BitcoinPrice {
         current_bet: BetInfos,
         bets_history: LegacyMap::<u64, BetInfos>,
         user_bet_yes_amount: LegacyMap::<ContractAddress, u256>,
-        user_bet_no_amount: LegacyMap::<ContractAddress, u256>
+        user_bet_no_amount: LegacyMap::<ContractAddress, u256>,
+        #[substorage(v0)]
+        ownable: OwnableComponent::Storage,
+        #[substorage(v0)]
+        pragma: PragmaPriceComponent::Storage,
     }
 
 
     #[constructor]
-    fn constructor(ref self: ContractState, end_date: u64, vote_date_limit: u64, reference_token_price: u256) {
+    fn constructor(ref self: ContractState, end_date: u64, vote_date_limit: u64, reference_token_price: u256, owner: ContractAddress, pragmaAddress: ContractAddress) {
         let eth_contract_address = ETH_CONTRACT_ADDRESS.try_into().unwrap();
         self.eth_token.write(IERC20CamelDispatcher { contract_address: eth_contract_address });
         self.total_bets.write(1); // First bet when contract is created
+
+        
+        let btc_price = self.pragma.get_asset_price_median(pragmaAddress, DataType::SpotEntry(KEY));
 
         let current_bet = BetInfos {
             id: 0,
@@ -58,11 +95,12 @@ pub mod BitcoinPrice {
             total_amount_no: 0,
             begin_date: get_current_timestamp(),
             end_date: end_date,
-            token_price_start: 0, // TODO: Fetch from pragma
+            token_price_start: btc_price.into(), // 8 decimals
             reference_token_price: reference_token_price,
             vote_date_limit: vote_date_limit,
         };
         self.current_bet.write(current_bet);
+        self.ownable.initializer(owner);
         self.bets_history.write(0, current_bet); // TODO: Remove this, make It when bet is over
     }
 
@@ -118,6 +156,11 @@ pub mod BitcoinPrice {
                     self.user_bet_no_amount.write(caller_address, self.user_bet_no_amount.read(caller_address) + amount_eth);
             }
         }
+
+        fn claimRewards(ref self: ContractState) -> u256 {
+            1_u256
+        }
+
 
         fn get_current_bet(self: @ContractState) -> BetInfos {
             self.current_bet.read()

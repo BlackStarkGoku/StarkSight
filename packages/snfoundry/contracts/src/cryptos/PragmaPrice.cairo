@@ -35,7 +35,3 @@ pub mod PragmaPrice {
 
     }
 }
-
-//USAGE
-//let oracle_address : ContractAddress = contract_address_const::<0x06df335982dddce41008e4c03f2546fa27276567b5274c7d0c1262f3c2b5d167>();
-//let price = get_asset_price_median(oracle_address, DataType::SpotEntry(KEY));

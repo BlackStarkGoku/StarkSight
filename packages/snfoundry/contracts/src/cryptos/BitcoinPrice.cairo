@@ -1,8 +1,26 @@
 use starknet::ContractAddress;
 
+
+#[derive(Copy, Drop, Serde, starknet::Store, Debug)]
+pub struct BetInfos {
+    id: u64,
+    pub total_amount: u256,
+    pub total_amount_yes: u256,
+    pub total_amount_no: u256,
+    begin_date: u64,
+    end_date: u64,
+    token_price_start: u256,
+    reference_token_price: u256,
+    vote_date_limit: u64,
+}
+
 #[starknet::interface]
 pub trait IBitcoinPrice<TContractState> {
     fn vote_yes(ref self: TContractState, amount_eth: u256);
+    fn vote_no(ref self: TContractState, amount_eth: u256);
+    fn get_current_bet(self: @TContractState) -> BetInfos;
+    fn get_own_yes_amount(self: @TContractState) -> u256;
+    fn get_own_no_amount(self: @TContractState) -> u256;
 }
 
 #[starknet::contract]
@@ -11,6 +29,8 @@ pub mod BitcoinPrice {
     use starknet::ContractAddress;
     use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDispatcherTrait};
     use starknet::{get_caller_address, get_contract_address, get_block_timestamp};
+    use super::BetInfos;
+
     const ETH_CONTRACT_ADDRESS: felt252 =
         0x49D36570D4E46F48E99674BD3FCC84644DDD6B96F7C741B1562B82F9E004DC7;
 
@@ -18,23 +38,10 @@ pub mod BitcoinPrice {
     struct Storage {
         eth_token: IERC20CamelDispatcher,
         total_bets: u64,
-        balance: u256,
         current_bet: BetInfos,
-        bets_history: LegacyMap::<u64, BetInfos>
-    }
-
-    #[derive(Copy, Drop, Serde, starknet::Store)]
-    struct BetInfos {
-        id: u64,
-        total_amount: u256,
-        total_amount_yes: u256,
-        total_amount_no: u256,
-        begin_date: u64,
-        end_date: u64,
-        token_price_start: u256,
-        reference_token_price: u256,
-        vote_date_limit: u64,
-
+        bets_history: LegacyMap::<u64, BetInfos>,
+        user_bet_yes_amount: LegacyMap::<ContractAddress, u256>,
+        user_bet_no_amount: LegacyMap::<ContractAddress, u256>
     }
 
 
@@ -42,7 +49,6 @@ pub mod BitcoinPrice {
     fn constructor(ref self: ContractState, end_date: u64, vote_date_limit: u64, reference_token_price: u256) {
         let eth_contract_address = ETH_CONTRACT_ADDRESS.try_into().unwrap();
         self.eth_token.write(IERC20CamelDispatcher { contract_address: eth_contract_address });
-        self.balance.write(0);
         self.total_bets.write(1); // First bet when contract is created
 
         let current_bet = BetInfos {
@@ -90,8 +96,37 @@ pub mod BitcoinPrice {
                     let mut current_bet : BetInfos = self.current_bet.read();
                     current_bet.total_amount += amount_eth;
                     current_bet.total_amount_yes += amount_eth;
-                    // TODO: Add user in stockage
+                    self.current_bet.write(current_bet);
+                    self.user_bet_yes_amount.write(caller_address, self.user_bet_yes_amount.read(caller_address) + amount_eth);
             }
+        }
+
+        fn vote_no(ref self: ContractState, amount_eth: u256) {
+            assert_bet_period_validity(@self);
+            let caller_address = get_caller_address();
+            if amount_eth > 0 {
+                // call approve on UI
+                self
+                    .eth_token
+                    .read()
+                    .transferFrom(caller_address, get_contract_address(), amount_eth);
+
+                    let mut current_bet : BetInfos = self.current_bet.read();
+                    current_bet.total_amount += amount_eth;
+                    current_bet.total_amount_no += amount_eth;
+                    self.current_bet.write(current_bet);
+                    self.user_bet_no_amount.write(caller_address, self.user_bet_no_amount.read(caller_address) + amount_eth);
+            }
+        }
+
+        fn get_current_bet(self: @ContractState) -> BetInfos {
+            self.current_bet.read()
+        }
+        fn get_own_yes_amount(self: @ContractState) -> u256 {
+            self.user_bet_yes_amount.read(get_caller_address())
+        }
+        fn get_own_no_amount(self: @ContractState) -> u256 {
+            self.user_bet_no_amount.read(get_caller_address())
         }
     }
 }

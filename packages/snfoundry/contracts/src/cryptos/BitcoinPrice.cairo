@@ -3,7 +3,7 @@ use starknet::ContractAddress;
 
 #[derive(Copy, Drop, Serde, starknet::Store, Debug)]
 pub struct BetInfos {
-    id: u64,
+    pub id: u64,
     pub total_amount: u256,
     pub total_amount_yes: u256,
     pub total_amount_no: u256,
@@ -19,9 +19,9 @@ pub trait IBitcoinPrice<TContractState> {
     fn vote_yes(ref self: TContractState, amount_eth: u256);
     fn vote_no(ref self: TContractState, amount_eth: u256);
     fn get_current_bet(self: @TContractState) -> BetInfos;
-    fn get_own_yes_amount(self: @TContractState) -> u256;
-    fn get_own_no_amount(self: @TContractState) -> u256;
-    fn claimRewards(ref self: TContractState) -> u256;
+    fn get_own_yes_amount(self: @TContractState, bet_id: u64) -> u256;
+    fn get_own_no_amount(self: @TContractState, bet_id: u64) -> u256;
+    fn claimRewards(ref self: TContractState, bet_id: u64) -> u256;
     // TODO: owner claim balance of contract
     // TODO: owner set new bet
 }
@@ -70,8 +70,8 @@ use super::IBitcoinPrice;
         total_bets: u64,
         current_bet: BetInfos,
         bets_history: LegacyMap::<u64, BetInfos>,
-        user_bet_yes_amount: LegacyMap::<ContractAddress, u256>,
-        user_bet_no_amount: LegacyMap::<ContractAddress, u256>,
+        user_bet_yes_amount: LegacyMap::<(ContractAddress, u64), u256>,
+        user_bet_no_amount: LegacyMap::<(ContractAddress, u64), u256>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
@@ -89,7 +89,7 @@ use super::IBitcoinPrice;
         let btc_price = self.pragma.get_asset_price_median(pragmaAddress, DataType::SpotEntry(KEY));
 
         let current_bet = BetInfos {
-            id: 0,
+            id: 1,
             total_amount: 0,
             total_amount_yes: 0,
             total_amount_no: 0,
@@ -118,6 +118,11 @@ use super::IBitcoinPrice;
         assert!(current_timestamp <= end_vote_bet_timestamp, "Vote is over");
     }
 
+    fn assert_current_bet_ended(self: @ContractState) {
+        let current_timestamp = get_current_timestamp();
+        let end_bet_timestamp = self.current_bet.read().end_date;
+        assert!(current_timestamp > end_bet_timestamp, "Bet is not over yet");
+    }
 
     #[abi(embed_v0)]
     impl BitcoinImpl of IBitcoinPrice<ContractState> {
@@ -135,7 +140,9 @@ use super::IBitcoinPrice;
                     current_bet.total_amount += amount_eth;
                     current_bet.total_amount_yes += amount_eth;
                     self.current_bet.write(current_bet);
-                    self.user_bet_yes_amount.write(caller_address, self.user_bet_yes_amount.read(caller_address) + amount_eth);
+
+                    let current_bet_id = self.current_bet.read().id;
+                    self.user_bet_yes_amount.write((caller_address, current_bet_id), self.user_bet_yes_amount.read((caller_address, current_bet_id)) + amount_eth);
             }
         }
 
@@ -153,11 +160,23 @@ use super::IBitcoinPrice;
                     current_bet.total_amount += amount_eth;
                     current_bet.total_amount_no += amount_eth;
                     self.current_bet.write(current_bet);
-                    self.user_bet_no_amount.write(caller_address, self.user_bet_no_amount.read(caller_address) + amount_eth);
+
+                    let current_bet_id = self.current_bet.read().id;
+                    self.user_bet_no_amount.write((caller_address, current_bet_id), self.user_bet_no_amount.read((caller_address, current_bet_id)) + amount_eth);
             }
         }
 
-        fn claimRewards(ref self: ContractState) -> u256 {
+        fn claimRewards(ref self: ContractState, bet_id: u64) -> u256 {
+            let current_bet = self.current_bet.read();
+            //let caller_address = get_caller_address();
+            if (current_bet.id == bet_id) {
+                assert_current_bet_ended(@self);
+
+            } else {
+               
+                
+            }
+            
             1_u256
         }
 
@@ -165,11 +184,11 @@ use super::IBitcoinPrice;
         fn get_current_bet(self: @ContractState) -> BetInfos {
             self.current_bet.read()
         }
-        fn get_own_yes_amount(self: @ContractState) -> u256 {
-            self.user_bet_yes_amount.read(get_caller_address())
+        fn get_own_yes_amount(self: @ContractState, bet_id: u64) -> u256 {
+            self.user_bet_yes_amount.read((get_caller_address(), bet_id))
         }
-        fn get_own_no_amount(self: @ContractState) -> u256 {
-            self.user_bet_no_amount.read(get_caller_address())
+        fn get_own_no_amount(self: @ContractState, bet_id: u64) -> u256 {
+            self.user_bet_no_amount.read((get_caller_address(), bet_id))
         }
     }
 }

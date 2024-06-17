@@ -109,3 +109,16 @@ fn test_get_bitcoin_price_from_pragma() {
     
     assert!(price != 0, "Price is 0");
 }
+
+
+#[test]
+#[fork("TEST")]
+fn test_get_bitcoin_price_from_pragma1() {
+    let contract_address = deploy_contract("BitcoinPrice");
+
+    let dispatcher = IBitcoinPriceDispatcher { contract_address };
+    
+    dispatcher.set_pragma_checkpoint();
+    
+
+}

@@ -8,6 +8,7 @@ use starknet::contract_address::contract_address_const;
 #[starknet::interface]
 pub trait IPragmaPrice<TContractState> {
     fn get_asset_price_median(self: @TContractState, oracle_address: ContractAddress, asset : DataType) -> u128;
+    fn set_asset_price_median_checkoint(self: @TContractState, oracle_address: ContractAddress, asset : DataType);
 }
 
 #[starknet::component]
@@ -35,6 +36,12 @@ pub mod PragmaPrice {
             let oracle_dispatcher = IPragmaABIDispatcher{contract_address : oracle_address};
             let output : PragmaPricesResponse= oracle_dispatcher.get_data(asset, AggregationMode::Median(()));
             return output.price;
+        }
+
+        fn set_asset_price_median_checkoint(self: @ComponentState<TContractState>, oracle_address: ContractAddress, asset : DataType) { 
+            let oracle_dispatcher = IPragmaABIDispatcher{contract_address : oracle_address};
+            let output = oracle_dispatcher.set_checkpoint(asset, AggregationMode::Median(()));
+            return output;
         }
 
     }

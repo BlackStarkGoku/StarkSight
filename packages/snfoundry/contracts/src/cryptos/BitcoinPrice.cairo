@@ -9,7 +9,7 @@ pub struct BetInfos {
     pub total_amount_no: u256,
     begin_date: u64,
     end_date: u64,
-    token_price_start: u256,
+    pub token_price_start: u256,
     reference_token_price: u256,
     vote_date_limit: u64,
 }

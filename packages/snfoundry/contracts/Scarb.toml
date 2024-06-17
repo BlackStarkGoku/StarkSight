@@ -19,5 +19,5 @@ sort-module-level-items = true
 
 [[tool.snforge.fork]]
 name = "TEST"
-url = "https://free-rpc.nethermind.io/mainnet-juno"
+url = "https://rpc.nethermind.io/mainnet-juno/?apikey=your-api-key"
 block_id.number = "649020"

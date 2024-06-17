@@ -2,6 +2,6 @@
 pub mod cryptos;
 #[cfg(test)]
 mod test {
-    mod TestPragmaPrice;
+    //mod TestPragmaPrice;
     mod TestBitcoinPrice;
 }

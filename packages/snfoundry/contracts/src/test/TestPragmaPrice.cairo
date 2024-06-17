@@ -16,16 +16,3 @@ fn deploy_contract(name: ByteArray) -> ContractAddress {
     let (contract_address, _) = contract.deploy(@calldata).unwrap();
     contract_address
 }
-
-#[test]
-#[fork("TEST")]
-fn test_get_bitcoin_price_from_pragma() {
-    let contract_address = deploy_contract("PragmaPrice");
-
-    let dispatcher = IPragmaPriceDispatcher { contract_address };
-    
-    let oracle_address : ContractAddress = contract_address_const::<0x2a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b>();
-    let price = dispatcher.get_asset_price_median(oracle_address, DataType::SpotEntry(KEY));
-
-    assert!(price != 0, "Price is 0");
-}

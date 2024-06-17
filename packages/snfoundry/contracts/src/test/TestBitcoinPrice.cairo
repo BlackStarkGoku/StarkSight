@@ -6,8 +6,8 @@ use openzeppelin::tests::utils::constants::OWNER;
 use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::{declare, ContractClassTrait, prank, CheatTarget, CheatSpan};
 use starknet::ContractAddress;
+use starknet::contract_address::contract_address_const;
 
-//use debug::PrintTrait;
 
 const ETH_CONTRACT_ADDRESS: felt252 =
         0x49D36570D4E46F48E99674BD3FCC84644DDD6B96F7C741B1562B82F9E004DC7;
@@ -18,9 +18,12 @@ fn deploy_contract(name: ByteArray) -> ContractAddress {
     
     let end_vote_bet_timestamp: u64 = 4102444800; // 1er janvier 2100
     let end_bet_timestamp: u64 = 4102444800_u64; // 1 février 2100
+    let oracle_address : ContractAddress = contract_address_const::<0x2a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b>();
     calldata.append_serde(end_vote_bet_timestamp);
     calldata.append_serde(end_bet_timestamp);
     calldata.append_serde(252542_u256);
+    calldata.append_serde(OWNER());
+    calldata.append_serde(oracle_address);
     let (contract_address, _) = contract.deploy(@calldata).unwrap();
     contract_address
 }
@@ -35,6 +38,8 @@ fn setup() -> IERC20CamelDispatcher {
     let eth_token = IERC20CamelDispatcher { contract_address: eth_contract_address };
     eth_token
 }
+
+
 
 #[test]
 #[fork("TEST")]
@@ -89,4 +94,16 @@ fn test_vote_no() {
 
     prank(CheatTarget::One(contract_address), 0x0213c67ed78bc280887234fe5ed5e77272465317978ae86c25a71531d9332a2d.try_into().unwrap(), CheatSpan::TargetCalls(1));
     assert!(dispatcher.get_own_no_amount() == 1, "User balance is suposed to be 1");
+}
+
+#[test]
+#[fork("TEST")]
+fn test_get_bitcoin_price_from_pragma() {
+    let contract_address = deploy_contract("BitcoinPrice");
+
+    let dispatcher = IBitcoinPriceDispatcher { contract_address };
+    
+    let price = dispatcher.get_current_bet().token_price_start;
+    println!("Price : {}", price);
+    assert!(price != 0, "Price is 0");
 }

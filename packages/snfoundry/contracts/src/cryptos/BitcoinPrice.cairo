@@ -32,7 +32,8 @@ pub trait IBitcoinPrice<TContractState> {
 
 #[starknet::contract]
 pub mod BitcoinPrice {
-    use contracts::cryptos::PragmaPrice::IPragmaPrice;
+    use core::traits::TryInto;
+use contracts::cryptos::PragmaPrice::IPragmaPrice;
 use super::IBitcoinPrice;
     use starknet::ContractAddress;
     use openzeppelin::access::ownable::OwnableComponent;
@@ -134,10 +135,13 @@ use super::IBitcoinPrice;
 
     fn claimYes(ref self: ContractState, caller_address: ContractAddress, bet: BetInfos) -> u256 {
         let amount_user_in_yes_pool = self.user_bet_yes_amount.read((caller_address, bet.id));
+        if (amount_user_in_yes_pool == 0) {
+            return 0;
+        }
         let percentage_user_of_yes_pool = (amount_user_in_yes_pool / bet.total_amount_yes) * 100;
         let amount_earned = (percentage_user_of_yes_pool * bet.total_amount_no) / 100;
 
-        if amount_earned > 0 {
+        if amount_user_in_yes_pool + amount_earned > 0 {
             // call approve on UI
             self
                 .eth_token
@@ -153,10 +157,13 @@ use super::IBitcoinPrice;
 
     fn claimNo(ref self: ContractState, caller_address: ContractAddress, bet: BetInfos) -> u256 {
         let amount_user_in_no_pool = self.user_bet_no_amount.read((caller_address, bet.id));
+        if (amount_user_in_no_pool == 0) {
+            return 0;
+        }
         let percentage_user_of_no_pool = (amount_user_in_no_pool / bet.total_amount_no) * 100;
         let amount_earned = (percentage_user_of_no_pool * bet.total_amount_yes) / 100;
 
-        if amount_earned > 0 {
+        if amount_user_in_no_pool + amount_earned > 0 {
             // call approve on UI
             self
                 .eth_token

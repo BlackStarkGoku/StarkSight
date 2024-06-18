@@ -4,7 +4,7 @@ use contracts::cryptos::BitcoinPrice::BetInfos;
 use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDispatcherTrait};
 use openzeppelin::tests::utils::constants::OWNER;
 use openzeppelin::utils::serde::SerializedAppend;
-use snforge_std::{declare, ContractClassTrait, prank, CheatTarget, CheatSpan};
+use snforge_std::{declare, ContractClassTrait, prank, CheatTarget, CheatSpan, start_warp, stop_warp};
 use starknet::ContractAddress;
 use starknet::contract_address::contract_address_const;
 
@@ -21,7 +21,7 @@ fn deploy_contract(name: ByteArray) -> ContractAddress {
     let oracle_address : ContractAddress = contract_address_const::<0x2a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b>();
     calldata.append_serde(end_vote_bet_timestamp);
     calldata.append_serde(end_bet_timestamp);
-    calldata.append_serde(252542_u256);
+    calldata.append_serde(6525086109850_u256);
     calldata.append_serde(OWNER());
     calldata.append_serde(oracle_address);
     let (contract_address, _) = contract.deploy(@calldata).unwrap();
@@ -113,12 +113,76 @@ fn test_get_bitcoin_price_from_pragma() {
 
 #[test]
 #[fork("TEST")]
-fn test_get_bitcoin_price_from_pragma1() {
+fn test_set_pragma_checkpoint() {
     let contract_address = deploy_contract("BitcoinPrice");
 
     let dispatcher = IBitcoinPriceDispatcher { contract_address };
     
     dispatcher.set_pragma_checkpoint();
+
+}
+
+#[test]
+#[fork("TEST")]
+fn test_set_bet_result_price() {
+    let contract_address = deploy_contract("BitcoinPrice");
+
+    let dispatcher = IBitcoinPriceDispatcher { contract_address };
+
+    prank(CheatTarget::One(contract_address), OWNER().try_into().unwrap(), CheatSpan::TargetCalls(1));
+    dispatcher.set_bet_result_price();
+}
+
+
+#[test]
+#[fork("TEST")]
+fn test_claim_rewards() {
+    let contract_address = deploy_contract("BitcoinPrice");
+    
+    let dispatcher = IBitcoinPriceDispatcher { contract_address };
+    let current_bet_id = dispatcher.get_current_bet().id;
+    let eth_token = setup();
+
+    
+    // Fund smart contract to cover gas fees
+    prank(CheatTarget::One(eth_token.contract_address), 0x0213c67ed78bc280887234fe5ed5e77272465317978ae86c25a71531d9332a2d.try_into().unwrap(), CheatSpan::TargetCalls(2));
+    eth_token.approve(contract_address, 100000000);
+    eth_token.transfer(contract_address, 100000000);
+
+    // Set bet result price
+    prank(CheatTarget::One(contract_address), OWNER().try_into().unwrap(), CheatSpan::TargetCalls(1));
+    dispatcher.set_bet_result_price();
+
+    let current_bet = dispatcher.get_current_bet();
+    assert!(current_bet.token_price_end == 6625086109850, "Result price is not correct"); // reference price is 6525086109850
+    assert!(current_bet.is_token_price_end_set == true, "Result price is not set");
+
+    
+    start_warp(CheatTarget::All, 4102444801_u64);   // Change blocktimestamp to simulate end of bet
+    prank(CheatTarget::One(contract_address), 0x0213c67ed78bc280887234fe5ed5e77272465317978ae86c25a71531d9332a2d.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    let rewards = dispatcher.claimRewards(current_bet_id);
+    assert!(rewards == 0, "Rewards is not 0");
+    stop_warp(CheatTarget::All);
+
+    // Vote yes
+    prank(CheatTarget::One(eth_token.contract_address), 0x0213c67ed78bc280887234fe5ed5e77272465317978ae86c25a71531d9332a2d.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    eth_token.approve(contract_address, 1);
+    prank(CheatTarget::One(contract_address), 0x0213c67ed78bc280887234fe5ed5e77272465317978ae86c25a71531d9332a2d.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    dispatcher.vote_yes(1);
+
+    // Vote no
+    prank(CheatTarget::One(eth_token.contract_address), 0x0213c67ed78bc280887234fe5ed5e77272465317978ae86c25a71531d9332a2d.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    eth_token.approve(contract_address, 1);
+    prank(CheatTarget::One(contract_address), 0x0213c67ed78bc280887234fe5ed5e77272465317978ae86c25a71531d9332a2d.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    dispatcher.vote_no(1);
     
 
+    start_warp(CheatTarget::All, 4102444801_u64);   // Change blocktimestamp
+
+   
+    prank(CheatTarget::One(eth_token.contract_address), contract_address, CheatSpan::TargetCalls(1));
+    eth_token.approve(contract_address, 2);
+    prank(CheatTarget::One(contract_address), 0x0213c67ed78bc280887234fe5ed5e77272465317978ae86c25a71531d9332a2d.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    let rewards = dispatcher.claimRewards(current_bet_id);
+    assert!(rewards == 2, "Rewards is not 2");
 }

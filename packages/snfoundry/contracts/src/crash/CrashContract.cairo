@@ -11,7 +11,7 @@ use starknet::ContractAddress;
 pub struct GameInfo {
     pub state: u8, // Since it was impossible to have an enum here state = 0 -> BetStaked, state = 1 -> ResultDetermined, state = 3 -> Game Done. 
     pub player_address: ContractAddress,
-    pub game_id: u256,
+    pub game_id: u128,
     pub stake_amount: u256,
     pub reached_multiplier: u256,
 }
@@ -25,9 +25,6 @@ pub trait ICrashContract<TContractState> {
         seed: u64,
         callback_address: ContractAddress,
         callback_fee_limit: u128,
-        publish_delay: u64,
-        num_words: u64,
-        calldata: Array<felt252>
     );
     fn receive_random_words(
         ref self: TContractState,
@@ -37,10 +34,10 @@ pub trait ICrashContract<TContractState> {
         calldata: Array<felt252>
     );
 
-    fn get_crash_point(ref self: TContractState, player_address : ContractAddress) -> u256;
+    fn get_crash_point(ref self: TContractState, player_address : ContractAddress) -> felt252;
     fn settle_game(ref self: TContractState, player_address : ContractAddress, reached_multiplier : u256) -> u8; // return 0 on loss and 1 on win 
     fn cashout (ref self: TContractState, player_address: ContractAddress);
-
+    fn deposit_funds (ref self: TContractState, amount: u256);
 }
 
 #[starknet::contract]
@@ -53,8 +50,8 @@ mod CrashContract {
     use super::{ContractAddress, ICrashContract, GameInfo};
     use core::array::{ArrayTrait, SpanTrait};
     use core::traits::{TryInto, Into};
-    use alexandria_math::sha512::sha512;
-
+    use core::poseidon::PoseidonTrait;
+    use core::hash::{HashStateTrait, HashStateExTrait};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
@@ -77,7 +74,7 @@ mod CrashContract {
     #[storage]
     struct Storage {
         eth_token: IERC20CamelDispatcher,
-        next_game_id: u256,
+        next_game_id: u128,
         games: LegacyMap<ContractAddress, GameInfo>,
         randomness_contract_address: ContractAddress,
         min_block_number_storage: u64,
@@ -87,9 +84,13 @@ mod CrashContract {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
+    fn constructor(ref self: ContractState, owner: ContractAddress, randomness_contract_address: ContractAddress) {
         let eth_contract_address = ETH_CONTRACT_ADDRESS.try_into().unwrap();
         self.eth_token.write(IERC20CamelDispatcher { contract_address: eth_contract_address });
+        self.next_game_id.write(0);
+        self.min_block_number_storage.write(0);
+        self.randomness_contract_address.write(randomness_contract_address);
+
         //self.greeting.write("Building Unstoppable Apps!!!");
         self.ownable.initializer(owner);
     }
@@ -107,9 +108,6 @@ mod CrashContract {
             seed: u64,
             callback_address: ContractAddress,
             callback_fee_limit: u128,
-            publish_delay: u64,
-            num_words: u64,
-            calldata: Array<felt252>
         ) {
             let randomness_contract_address = self.randomness_contract_address.read();
             let randomness_dispatcher = IRandomnessDispatcher {
@@ -163,13 +161,26 @@ mod CrashContract {
             self.games.write(player_address, game_info);
         }
         
-        fn get_crash_point(ref self: ContractState, player_address: ContractAddress) -> u256{
-            let seed = self.last_random_storage.read();
-            let game_id = self.games.read(player_address).game_id;
-
+        fn get_crash_point(ref self: ContractState, player_address: ContractAddress) -> felt252 {
+            let game_info = self.games.read(player_address);
+            if (game_info.state != 0) {
+                return 0;
+            }
+            let random_seed = self.last_random_storage.read();
+            let game_id: felt252 = self.games.read(player_address).game_id.into();
+            let game_seed = random_seed + game_id;
+            let h = PoseidonTrait::new().update_with(game_seed).finalize();
+            return h;
         }
 
         fn cashout (ref self: ContractState, player_address: ContractAddress) {
+            let game_info = self.games.read(player_address);
+            if (game_info.state == 1) {
+                self
+                    .eth_token
+                    .read()
+                    .transferFrom(get_contract_address(), player_address, game_info.stake_amount* game_info.reached_multiplier);
+            }
 
         }
 
@@ -177,10 +188,18 @@ mod CrashContract {
             //Settle_game is called after the user is done playing, it takes the user's final multiplier. 
             let game_info = self.games.read(player_address);
             if (game_info.state != 0) {
-                return 0;
+                return 1;
             }
             let _updated_game_info = GameInfo {state: 1, reached_multiplier : reached_multiplier, ..game_info};
             return 0;
+        }
+
+        fn deposit_funds (ref self: ContractState, amount: u256) {
+            let funder_address: ContractAddress = get_caller_address();
+            self
+                .eth_token
+                .read()
+                .transferFrom(funder_address, get_contract_address(), amount);
         }
     }
 }

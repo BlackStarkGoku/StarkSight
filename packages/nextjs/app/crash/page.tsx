@@ -27,7 +27,7 @@ ChartJS.register(
 
 const Crash: NextPage = () => {
   const [betAmount, setBetAmount] = useState<number>(0);
-  const [cashoutAt, setCashoutAt] = useState<number>(2.0);
+  const [cashoutAt, setCashoutAt] = useState<number>(5.0);
   const [currentMultiplier, setCurrentMultiplier] = useState<number>(1.0);
   const [cashedOutMultiplier, setCashedOutMultiplier] = useState<number>(1.0);
   const [isCashedOut, setIsCashedOut] = useState<boolean>(false);
@@ -52,6 +52,7 @@ const Crash: NextPage = () => {
     let interval: NodeJS.Timeout | null = null;
 
     if (roundActive && !isCrashed) {
+      const growthRate = 1.015;
       interval = setInterval(() => {
         setCurrentMultiplier((prev) => {
           if (prev >= randomCrash) {
@@ -60,9 +61,9 @@ const Crash: NextPage = () => {
             setRoundActive(false);
             return prev;
           }
-          return prev + 0.01;
+          return prev * growthRate;
         });
-        setTime((prev) => prev + 0.1);
+        setTime((prev) => prev + 0.15);
       }, 100);
     } else if (interval) {
       clearInterval(interval);
@@ -99,7 +100,11 @@ const Crash: NextPage = () => {
   }, [isCrashed]);
 
   const startRound = () => {
-    if (betAmount > 0) {
+    if (betAmount == 0) {
+      notification.warning("Please enter a valid bet amount greater than 0");
+    } else if (cashoutAt <= 1) {
+      notification.warning("Please enter a valid cashout amount greater than 1");
+    } else {
       setCurrentMultiplier(1.0);
       setIsCrashed(false);
       setIsCashedOut(false);
@@ -117,8 +122,6 @@ const Crash: NextPage = () => {
           },
         ],
       });
-    } else {
-      notification.warning("Please enter a valid bet amount");
     }
   };
 

@@ -10,6 +10,7 @@ starknet = ">=2.5.4"
 openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.10.0" }
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.23.0" }
 pragma_lib = { git = "https://github.com/astraly-labs/pragma-lib.git"}
+alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git" }
 
 [[target.starknet-contract]]
 casm = true

@@ -9,15 +9,16 @@ use starknet::ContractAddress;
 
 #[derive(Drop, Serde, Copy, starknet::Store)]
 pub struct GameInfo {
-    pub state: u8, // Since it was impossible to have an enum here state = 0 tate = 2 -> ResultDetermined, state = 3 -> Done. 
+    pub state: u8, // Since it was impossible to have an enum here state = 0 -> BetStaked, state = 1 -> ResultDetermined, state = 3 -> Game Done. 
     pub player_address: ContractAddress,
     pub game_id: u256,
     pub stake_amount: u256,
-
+    pub reached_multiplier: u256,
 }
 
 #[starknet::interface]
 pub trait ICrashContract<TContractState> {
+    fn get_last_random(self: @TContractState) -> felt252;
     fn start_game(ref self: TContractState, stake_amount:u256);
     fn request_my_randomness(
         ref self: TContractState,
@@ -35,6 +36,11 @@ pub trait ICrashContract<TContractState> {
         random_words: Span<felt252>,
         calldata: Array<felt252>
     );
+
+    fn get_crash_point(ref self: TContractState, player_address : ContractAddress) -> u256;
+    fn settle_game(ref self: TContractState, player_address : ContractAddress, reached_multiplier : u256) -> u8; // return 0 on loss and 1 on win 
+    fn cashout (ref self: TContractState, player_address: ContractAddress);
+
 }
 
 #[starknet::contract]
@@ -47,6 +53,7 @@ mod CrashContract {
     use super::{ContractAddress, ICrashContract, GameInfo};
     use core::array::{ArrayTrait, SpanTrait};
     use core::traits::{TryInto, Into};
+    use alexandria_math::sha512::sha512;
 
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -89,6 +96,11 @@ mod CrashContract {
 
     #[abi(embed_v0)]
     impl CrashContractImpl of ICrashContract<ContractState> {
+        
+        fn get_last_random(self: @ContractState) -> felt252 {
+            let last_random = self.last_random_storage.read();
+            return last_random;
+        }
 
         fn request_my_randomness(
             ref self: ContractState,
@@ -146,11 +158,29 @@ mod CrashContract {
                 .eth_token
                 .read()
                 .transferFrom(player_address, get_contract_address(), stake_amount);
-            let game_info = GameInfo {state: 0, player_address: player_address, game_id: game_id, stake_amount: stake_amount};
+            let game_info = GameInfo {state: 0, player_address: player_address, game_id: game_id, stake_amount: stake_amount, reached_multiplier: 0};
+
             self.games.write(player_address, game_info);
+        }
+        
+        fn get_crash_point(ref self: ContractState, player_address: ContractAddress) -> u256{
+            let seed = self.last_random_storage.read();
+            let game_id = self.games.read(player_address).game_id;
+
+        }
+
+        fn cashout (ref self: ContractState, player_address: ContractAddress) {
+
+        }
+
+        fn settle_game (ref self: ContractState, player_address: ContractAddress, reached_multiplier: u256) -> u8{
+            //Settle_game is called after the user is done playing, it takes the user's final multiplier. 
+            let game_info = self.games.read(player_address);
+            if (game_info.state != 0) {
+                return 0;
             }
-
-
+            let _updated_game_info = GameInfo {state: 1, reached_multiplier : reached_multiplier, ..game_info};
+            return 0;
+        }
     }
-
 }

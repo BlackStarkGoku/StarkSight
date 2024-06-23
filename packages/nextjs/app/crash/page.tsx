@@ -6,7 +6,7 @@ import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
-  LinearScale,
+  LogarithmicScale,
   PointElement,
   LineElement,
   Title,
@@ -17,13 +17,21 @@ import { notification } from "~~/utils/scaffold-stark";
 
 ChartJS.register(
   CategoryScale,
-  LinearScale,
+  LogarithmicScale,
   PointElement,
   LineElement,
   Title,
   Tooltip,
   Legend,
 );
+
+const chartOptions = {
+  plugins: {
+    legend: {
+      display: false,
+    },
+  },
+};
 
 const Crash: NextPage = () => {
   const [betAmount, setBetAmount] = useState<number>(0);
@@ -32,6 +40,7 @@ const Crash: NextPage = () => {
   const [cashedOutMultiplier, setCashedOutMultiplier] = useState<number>(1.0);
   const [isCashedOut, setIsCashedOut] = useState<boolean>(false);
   const [isCrashed, setIsCrashed] = useState<boolean>(false);
+  const [isRoundLost, setIsRoundLost] = useState<boolean>(false);
   const [roundActive, setRoundActive] = useState<boolean>(false);
   const [randomCrash, setRandomCrash] = useState<number>(Math.random() * 2 + 1);
   const [betHistory, setBetHistory] = useState<number[]>([]);
@@ -42,8 +51,10 @@ const Crash: NextPage = () => {
       {
         label: "Multiplier",
         data: [],
-        borderColor: "rgba(255, 206, 86, 1)",
-        backgroundColor: "rgba(255, 206, 86, 0.2)",
+        borderColor: "rgba(255, 255, 255, 1)",
+        backgroundColor: "rgba(255, 206, 86, 0.5)",
+        pointRadius: 0,
+        borderWidth: 4,
       },
     ],
   });
@@ -52,19 +63,23 @@ const Crash: NextPage = () => {
     let interval: NodeJS.Timeout | null = null;
 
     if (roundActive && !isCrashed) {
-      const growthRate = 1.015;
+      let growthRate = 1;
       interval = setInterval(() => {
         setCurrentMultiplier((prev) => {
+          growthRate += prev/100;
           if (prev >= randomCrash) {
             setIsCrashed(true);
+            if (!isCashedOut) {
+              setIsRoundLost(true);
+            }
             clearInterval(interval as NodeJS.Timeout);
             setRoundActive(false);
             return prev;
           }
-          return prev * growthRate;
+          return prev + 0.01;
         });
-        setTime((prev) => prev + 0.15);
-      }, 100);
+        setTime((prev) => prev + (0.1 / growthRate));
+      }, 100 / growthRate);
     } else if (interval) {
       clearInterval(interval);
     }
@@ -79,7 +94,7 @@ const Crash: NextPage = () => {
   useEffect(() => {
     if (roundActive) {
       setData((prevData) => ({
-        labels: [...prevData.labels, time],
+        labels: [...prevData.labels, Number(time.toFixed(1))],
         datasets: [
           {
             ...prevData.datasets[0],
@@ -108,6 +123,7 @@ const Crash: NextPage = () => {
       setCurrentMultiplier(1.0);
       setIsCrashed(false);
       setIsCashedOut(false);
+      setIsRoundLost(false);
       setRandomCrash(Math.random() * 5 + 1);
       setRoundActive(true);
       setTime(0);
@@ -118,7 +134,7 @@ const Crash: NextPage = () => {
             label: "Multiplier",
             data: [],
             borderColor: "rgba(255, 206, 86, 1)",
-            backgroundColor: "rgba(255, 206, 86, 0.2)",
+            backgroundColor: "rgba(255, 206, 86, 0.5)",
           },
         ],
       });
@@ -181,21 +197,29 @@ const Crash: NextPage = () => {
           </button>
         </div>
 
-        {!isCashedOut ? (
-          <div className="mt-4 bg-gray-800 p-2 rounded-md">
-            <h3 className="text-lg mb-2">Profit on Win</h3>
-            <div className="text-xl">
-              {(betAmount * (currentMultiplier - 1)).toFixed(8)} ETH
-            </div>
-          </div>
-        ) : (
+        { isCashedOut ? (
           <div className="mt-4 bg-gray-800 p-2 rounded-md">
             <h3 className="text-lg mb-2">Profit Won</h3>
             <div className="text-xl">
               {(betAmount * (cashedOutMultiplier - 1)).toFixed(8)} ETH
             </div>
           </div>
-        )}
+          ) : !isRoundLost ? (
+            <div className="mt-4 bg-gray-800 p-2 rounded-md">
+              <h3 className="text-lg mb-2">Profit on Win</h3>
+              <div className="text-xl">
+                {(betAmount * (currentMultiplier - 1)).toFixed(8)} ETH
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 bg-gray-800 p-2 rounded-md">
+              <h3 className="text-lg mb-2">Round Lost</h3>
+              <div className="text-xl">
+                {betAmount.toFixed(8)} ETH
+              </div>
+            </div>
+          )
+        }
 
         <div className="mt-4 bg-gray-800 p-2 rounded-md">
           <h3 className="text-lg mb-2">Bet History</h3>
@@ -214,12 +238,39 @@ const Crash: NextPage = () => {
           <Line
             data={data}
             options={{
-              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: false,
+                },
+              },
+              maintainAspectRatio: true,
+              aspectRatio: 2,
               scales: {
                 x: {
                   ticks: {
                     display: false,
+                    maxTicksLimit: 5 * (1 + currentMultiplier * currentMultiplier)
                   },
+                },
+                y: {
+                  type: 'logarithmic',
+                  position: 'left',
+                  ticks: {
+                    callback: function(value, index, values) {
+                      return Number(value).toLocaleString();
+                    },
+                    maxTicksLimit: 5 * (1 + currentMultiplier)
+                  },
+                  grid: {
+                    display: true,
+                    drawOnChartArea: true,
+                    drawTicks: true,
+                  },
+                },
+              },
+              elements: {
+                line: {
+                  tension: 0.4,
                 },
               },
             }}
@@ -237,8 +288,8 @@ const Crash: NextPage = () => {
             <span>{time.toFixed(1)}s</span>
           </div>
         </div>
-        <div className="mt-4">
-          <div className="flex justify-between text-3xl pt-3 mt-4 mb-3">
+        <div className="mt-3">
+          <div className="flex justify-between text-3xl pt-3 mt-3 mb-2">
             <div className="ml-2">{currentMultiplier.toFixed(2)}x</div>
           </div>
           <br />

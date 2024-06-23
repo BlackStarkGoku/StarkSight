@@ -66,7 +66,7 @@ const Crash: NextPage = () => {
       let growthRate = 1;
       interval = setInterval(() => {
         setCurrentMultiplier((prev) => {
-          growthRate += prev/100;
+          growthRate += prev / 100;
           if (prev >= randomCrash) {
             setIsCrashed(true);
             if (!isCashedOut) {
@@ -78,7 +78,7 @@ const Crash: NextPage = () => {
           }
           return prev + 0.01;
         });
-        setTime((prev) => prev + (0.1 / growthRate));
+        setTime((prev) => prev + 0.1 / growthRate);
       }, 100 / growthRate);
     } else if (interval) {
       clearInterval(interval);
@@ -118,7 +118,9 @@ const Crash: NextPage = () => {
     if (betAmount == 0) {
       notification.warning("Please enter a valid bet amount greater than 0");
     } else if (cashoutAt <= 1) {
-      notification.warning("Please enter a valid cashout amount greater than 1");
+      notification.warning(
+        "Please enter a valid cashout amount greater than 1",
+      );
     } else {
       setCurrentMultiplier(1.0);
       setIsCrashed(false);
@@ -197,29 +199,26 @@ const Crash: NextPage = () => {
           </button>
         </div>
 
-        { isCashedOut ? (
+        {isCashedOut ? (
           <div className="mt-4 bg-gray-800 p-2 rounded-md">
             <h3 className="text-lg mb-2">Profit Won</h3>
             <div className="text-xl">
               {(betAmount * (cashedOutMultiplier - 1)).toFixed(8)} ETH
             </div>
           </div>
-          ) : !isRoundLost ? (
-            <div className="mt-4 bg-gray-800 p-2 rounded-md">
-              <h3 className="text-lg mb-2">Profit on Win</h3>
-              <div className="text-xl">
-                {(betAmount * (currentMultiplier - 1)).toFixed(8)} ETH
-              </div>
+        ) : !isRoundLost ? (
+          <div className="mt-4 bg-gray-800 p-2 rounded-md">
+            <h3 className="text-lg mb-2">Profit on Win</h3>
+            <div className="text-xl">
+              {(betAmount * (currentMultiplier - 1)).toFixed(8)} ETH
             </div>
-          ) : (
-            <div className="mt-4 bg-gray-800 p-2 rounded-md">
-              <h3 className="text-lg mb-2">Round Lost</h3>
-              <div className="text-xl">
-                {betAmount.toFixed(8)} ETH
-              </div>
-            </div>
-          )
-        }
+          </div>
+        ) : (
+          <div className="mt-4 bg-gray-800 p-2 rounded-md">
+            <h3 className="text-lg mb-2">Round Lost</h3>
+            <div className="text-xl">{betAmount.toFixed(8)} ETH</div>
+          </div>
+        )}
 
         <div className="mt-4 bg-gray-800 p-2 rounded-md">
           <h3 className="text-lg mb-2">Bet History</h3>
@@ -249,17 +248,18 @@ const Crash: NextPage = () => {
                 x: {
                   ticks: {
                     display: false,
-                    maxTicksLimit: 5 * (1 + currentMultiplier * currentMultiplier)
+                    maxTicksLimit:
+                      5 * (1 + currentMultiplier * currentMultiplier),
                   },
                 },
                 y: {
-                  type: 'logarithmic',
-                  position: 'left',
+                  type: "logarithmic",
+                  position: "left",
                   ticks: {
-                    callback: function(value, index, values) {
+                    callback: function (value, index, values) {
                       return Number(value).toLocaleString();
                     },
-                    maxTicksLimit: 5 * (1 + currentMultiplier)
+                    maxTicksLimit: 5 * (1 + currentMultiplier),
                   },
                   grid: {
                     display: true,

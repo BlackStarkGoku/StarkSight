@@ -4,6 +4,7 @@ import Wallet from "~~/components/scaffold-stark/CustomConnectButton/Wallet";
 import { useLocalStorage } from "usehooks-ts";
 import { burnerAccounts } from "~~/utils/devnetAccounts";
 import { BurnerConnector } from "~~/services/web3/stark-burner/BurnerConnector";
+import GenericModal from "./GenericModal";
 
 type Props = {
   isOpen: boolean;

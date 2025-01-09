@@ -130,7 +130,6 @@ fn initialize_crypto_classic_bet(
 }
 
 #[test]
-#[ignore]
 fn test_create_crypto_bets() {
     let contract_address = deploy_contract("BetMaker");
 
@@ -144,7 +143,6 @@ fn test_create_crypto_bets() {
 
 
 #[test]
-#[ignore]
 #[fork("MAINNET_LATEST")]
 fn test_create_user_position_from_crypto_nimbora_bet() {
     let contract_address = deploy_contract("BetMaker");
@@ -193,7 +191,6 @@ fn test_create_user_position_from_crypto_nimbora_bet() {
 // }
 
 #[test]
-#[ignore]
 #[fork("MAINNET_LATEST")]
 fn test_fetch_oracle_crypto_price() {
     let contract_address = deploy_contract("BetMaker");
@@ -203,7 +200,6 @@ fn test_fetch_oracle_crypto_price() {
 }
 
 #[test]
-#[ignore]
 #[fork("MAINNET_LATEST")]
 fn test_settle_crypto_nimbora_bet() {
     let contract_address = deploy_contract("BetMaker");

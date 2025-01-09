@@ -8,8 +8,8 @@ use openzeppelin::tests::utils::constants::OWNER;
 use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDispatcherTrait};
 use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::{
-    declare, ContractClassTrait, prank, CheatTarget, CheatSpan, start_warp, stop_warp, store,
-    map_entry_address
+    CheatSpan, CheatTarget, ContractClassTrait, declare, map_entry_address, prank, start_warp,
+    stop_warp, store,
 };
 use starknet::ContractAddress;
 use starknet::contract_address::contract_address_const;
@@ -67,11 +67,11 @@ fn test_create_bet() {
             1720083600000,
             eth_token.contract_address,
             NIMBORA_ADDRESS,
-            '18669995996566340'
+            '18669995996566340',
         );
 
     assert!(dispatcher.getTotalBets() == 1, "Total bets should be 1.");
-//dispatcher.claimRewards(78);
+    //dispatcher.claimRewards(78);
 }
 
 
@@ -101,7 +101,7 @@ fn test_vote_yes() {
             1720083600000,
             eth_token.contract_address,
             NIMBORA_ADDRESS,
-            '18669995996566340'
+            '18669995996566340',
         );
 
     let bet_id = dispatcher.getTotalBets();
@@ -109,12 +109,12 @@ fn test_vote_yes() {
     assert!(dispatcher.getBet(bet_id).total_shares_amount == 0, "Nimbora shares should be 0");
     assert!(
         dispatcher.get_yes_position(user_address, bet_id).amount == 0,
-        "User balance is suposed to be 0"
+        "User balance is suposed to be 0",
     );
     assert!(eth_token.balanceOf(contract_address) == 0, "Contract balance is suposed to be 0");
     assert!(
         nimbora_token.balanceOf(contract_address) == 0,
-        "Contract Nimbora balance is suposed to be 0"
+        "Contract Nimbora balance is suposed to be 0",
     );
 
     prank(CheatTarget::One(eth_token.contract_address), user_address, CheatSpan::TargetCalls(1));
@@ -125,14 +125,14 @@ fn test_vote_yes() {
 
     assert!(
         dispatcher.get_yes_position(user_address, bet_id).amount == 7,
-        "User balance is suposed to be 7"
+        "User balance is suposed to be 7",
     );
 
     assert!(eth_token.balanceOf(contract_address) == 0, "Contract balance is suposed to be 0");
 
     assert!(
         nimbora_token.balanceOf(contract_address) == 6,
-        "Contract Nimbora balance is suposed to be 6"
+        "Contract Nimbora balance is suposed to be 6",
     );
 
     assert!(dispatcher.getBet(bet_id).total_shares_amount == 6, "Nimbora shares should be 6");
@@ -165,7 +165,7 @@ fn test_settle_bet() {
             1720083600000,
             eth_token.contract_address,
             NIMBORA_ADDRESS,
-            'BTC/USD'
+            'BTC/USD',
         );
 
     let bet_id = dispatcher.getTotalBets();
@@ -178,13 +178,13 @@ fn test_settle_bet() {
 
     assert!(dispatcher.getBet(bet_id).is_bet_ended == false, "Bet should be open");
     assert!(
-        dispatcher.getBet(bet_id).winner_result.is_settled == false, "Bet should not be settled"
+        dispatcher.getBet(bet_id).winner_result.is_settled == false, "Bet should not be settled",
     );
     assert!(dispatcher.getBet(bet_id).is_nimbora_claimed == false, "Nimbora should not be claimed");
 
     assert!(
         nimbora_token.balanceOf(contract_address) == 6941957145251430232,
-        "Contract Nimbora balance is suposed to be 6941957145251430232"
+        "Contract Nimbora balance is suposed to be 6941957145251430232",
     );
     assert!(eth_token.balanceOf(contract_address) == 0, "Contract balance is suposed to be 0");
 
@@ -196,7 +196,7 @@ fn test_settle_bet() {
     assert!(dispatcher.getBet(bet_id).winner_result.is_yes_outcome == true, "Winner should be yes");
     assert!(
         dispatcher.getBet(bet_id).winner_result.result_token_price == 6625086109850,
-        "Result price not settled"
+        "Result price not settled",
     );
     assert!(dispatcher.getBet(bet_id).is_bet_ended == true, "Bet should be closed");
 
@@ -204,19 +204,19 @@ fn test_settle_bet() {
 
     assert!(
         nimbora_token.balanceOf(contract_address) == 0,
-        "Contract Nimbora balance is suposed to be 0"
+        "Contract Nimbora balance is suposed to be 0",
     );
 
     let new_epoch: u256 = dispatcher.getBet(bet_id).nimbora.handled_epoch_withdrawal_len() + 2;
 
     let handled_epoch_withdrawal_len_array_value: Array<felt252> = array![
-        new_epoch.low.into(), new_epoch.high.into()
+        new_epoch.low.into(), new_epoch.high.into(),
     ];
 
     store(
         NIMBORA_ADDRESS,
         selector!("handled_epoch_withdrawal_len"),
-        handled_epoch_withdrawal_len_array_value.span()
+        handled_epoch_withdrawal_len_array_value.span(),
     );
 
     // let underlying = dispatcher.getBet(bet_id).nimbora.underlying();
@@ -228,18 +228,18 @@ fn test_settle_bet() {
     let map_value_balance: Array<felt252> = array![amount.low.into(), amount.high.into()];
 
     let map_key_balance: Array<felt252> = array![
-        dispatcher.getBet(bet_id).nimbora.contract_address.try_into().unwrap()
+        dispatcher.getBet(bet_id).nimbora.contract_address.try_into().unwrap(),
     ];
 
     store(
         eth_token.contract_address,
         map_entry_address(selector!("ERC20_balances"), map_key_balance.span()),
-        map_value_balance.span()
+        map_value_balance.span(),
     );
     dispatcher.getBet(bet_id).nimbora.claim_withdrawal(contract_address, 0);
     assert!(
         eth_token.balanceOf(contract_address) == 6999999999999999999,
-        "Contract balance is suposed to be 6999999999999999999"
+        "Contract balance is suposed to be 6999999999999999999",
     );
 }
 //652086109850
@@ -258,14 +258,15 @@ fn test_claim_rewards() {
     >();
     let contract_address = deploy_contract("BetCryptoMaker");
     let (eth_token, nimbora_token) = setup();
-    
+
     prank(CheatTarget::One(eth_token.contract_address), user_address, CheatSpan::TargetCalls(1));
     eth_token.approve(contract_address, 7000000000000000000);
 
-    prank(CheatTarget::One(eth_token.contract_address), contract_address, CheatSpan::TargetCalls(1));
+    prank(
+        CheatTarget::One(eth_token.contract_address), contract_address, CheatSpan::TargetCalls(1),
+    );
     eth_token.transferFrom(user_address, contract_address, 7000000000000000000);
 
-    
     let dispatcher = IBetCryptoMakerDispatcher { contract_address };
 
     prank(CheatTarget::One(contract_address), OWNER(), CheatSpan::TargetCalls(1));
@@ -279,7 +280,7 @@ fn test_claim_rewards() {
             1720083600000,
             eth_token.contract_address,
             NIMBORA_ADDRESS,
-            'BTC/USD'
+            'BTC/USD',
         );
 
     let bet_id = dispatcher.getTotalBets();
@@ -294,13 +295,13 @@ fn test_claim_rewards() {
 
     assert!(dispatcher.getBet(bet_id).is_bet_ended == false, "Bet should be open");
     assert!(
-        dispatcher.getBet(bet_id).winner_result.is_settled == false, "Bet should not be settled"
+        dispatcher.getBet(bet_id).winner_result.is_settled == false, "Bet should not be settled",
     );
     assert!(dispatcher.getBet(bet_id).is_nimbora_claimed == false, "Nimbora should not be claimed");
 
     assert!(
         nimbora_token.balanceOf(contract_address) == 6,
-        "Contract Nimbora balance is suposed to be 6"
+        "Contract Nimbora balance is suposed to be 6",
     );
 
     // Settle the bet
@@ -311,7 +312,7 @@ fn test_claim_rewards() {
     assert!(dispatcher.getBet(bet_id).winner_result.is_yes_outcome == true, "Winner should be yes");
     assert!(
         dispatcher.getBet(bet_id).winner_result.result_token_price == 6625086109850,
-        "Result price not settled"
+        "Result price not settled",
     );
     assert!(dispatcher.getBet(bet_id).is_bet_ended == true, "Bet should be closed");
 
@@ -319,19 +320,19 @@ fn test_claim_rewards() {
 
     assert!(
         nimbora_token.balanceOf(contract_address) == 0,
-        "Contract Nimbora balance is suposed to be 0"
+        "Contract Nimbora balance is suposed to be 0",
     );
 
     let new_epoch: u256 = dispatcher.getBet(bet_id).nimbora.handled_epoch_withdrawal_len() + 2;
 
     let handled_epoch_withdrawal_len_array_value: Array<felt252> = array![
-        new_epoch.low.into(), new_epoch.high.into()
+        new_epoch.low.into(), new_epoch.high.into(),
     ];
 
     store(
         NIMBORA_ADDRESS,
         selector!("handled_epoch_withdrawal_len"),
-        handled_epoch_withdrawal_len_array_value.span()
+        handled_epoch_withdrawal_len_array_value.span(),
     );
 
     // let underlying = dispatcher.getBet(bet_id).nimbora.underlying();
@@ -343,17 +344,15 @@ fn test_claim_rewards() {
     let map_value_balance: Array<felt252> = array![amount.low.into(), amount.high.into()];
 
     let map_key_balance: Array<felt252> = array![
-        dispatcher.getBet(bet_id).nimbora.contract_address.try_into().unwrap()
+        dispatcher.getBet(bet_id).nimbora.contract_address.try_into().unwrap(),
     ];
 
     store(
         eth_token.contract_address,
         map_entry_address(selector!("ERC20_balances"), map_key_balance.span()),
-        map_value_balance.span()
+        map_value_balance.span(),
     );
     dispatcher.getBet(bet_id).nimbora.claim_withdrawal(contract_address, 0);
-
-  
 
     //prank(CheatTarget::One(contract_address), user_address, CheatSpan::TargetCalls(1));
     assert!(!dispatcher.checkHasClaimed(user_address, bet_id), "Bet is not supposed to be claimed");
@@ -361,16 +360,17 @@ fn test_claim_rewards() {
     //Refaire un checkHasClaimed à faux à la toute fin
 
     prank(CheatTarget::One(contract_address), user_address, CheatSpan::TargetCalls(1));
-    //(PLUS TARD) essayer de claim no et vérifier que cela ne fait rien car l'user n'a pas voté de no
+    //(PLUS TARD) essayer de claim no et vérifier que cela ne fait rien car l'user n'a pas voté de
+    //no
 
     assert!(
-        eth_token.balanceOf(user_address) == initial_balanceOf_user - 7, "Wrong user balance (2)"
+        eth_token.balanceOf(user_address) == initial_balanceOf_user - 7, "Wrong user balance (2)",
     );
     println!("BEFORE- {:?}", eth_token.balanceOf(user_address));
     dispatcher.claimRewards(bet_id, true);
     println!("AFTER- {:?}", eth_token.balanceOf(user_address));
     assert!(
-        eth_token.balanceOf(user_address) == initial_balanceOf_user - 1, "Wrong user balance (3)"
+        eth_token.balanceOf(user_address) == initial_balanceOf_user - 1, "Wrong user balance (3)",
     );
     assert!(dispatcher.checkHasClaimed(user_address, bet_id), "Bet is supposed to be claimed");
 }

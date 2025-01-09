@@ -4,9 +4,9 @@ import { useState } from "react";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { mintEth } from "~~/services/web3/faucet";
 import { Address, devnet } from "@starknet-react/chains";
-import { useAccount } from "@starknet-react/core";
 import { useTargetNetwork } from "~~/hooks/scaffold-stark/useTargetNetwork";
 import useScaffoldEthBalance from "~~/hooks/scaffold-stark/useScaffoldEthBalance";
+import { useAccount } from "~~/hooks/useAccount";
 
 // Number of ETH faucet sends to an address
 const NUM_OF_ETH = "1";
@@ -49,12 +49,12 @@ export const FaucetButton = () => {
       className={
         !isBalanceZero
           ? "ml-1"
-          : "ml-1 tooltip tooltip-bottom tooltip-secondary tooltip-open font-bold before:left-auto before:transform-none before:content-[attr(data-tip)] before:right-0"
+          : "tooltip tooltip-bottom tooltip-open tooltip-secondary ml-1 font-bold before:left-auto before:right-0 before:transform-none before:content-[attr(data-tip)]"
       }
       data-tip="Grab funds from faucet"
     >
       <button
-        className="btn btn-secondary btn-sm px-2 rounded-full"
+        className="btn btn-secondary btn-sm rounded-full px-2"
         onClick={sendETH}
         disabled={loading}
       >

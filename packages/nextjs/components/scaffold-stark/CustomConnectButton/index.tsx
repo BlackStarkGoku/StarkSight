@@ -10,9 +10,9 @@ import { useTargetNetwork } from "~~/hooks/scaffold-stark/useTargetNetwork";
 import { getBlockExplorerAddressLink } from "~~/utils/scaffold-stark";
 import { useAccount, useNetwork } from "@starknet-react/core";
 import { Address } from "@starknet-react/chains";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ConnectModal from "./ConnectModal";
-import { Button } from "~~/app/Uikit/components/ui/button";
+import scaffoldConfig from "~~/scaffold.config";
 
 /**
  * Custom Connect Button (watch balance + custom design)
@@ -21,50 +21,56 @@ export const CustomConnectButton = () => {
   useAutoConnect();
   const networkColor = useNetworkColor();
   const { targetNetwork } = useTargetNetwork();
-  const { address, status, chainId, ...props } = useAccount();
+  const { account, status, address: accountAddress } = useAccount();
+  const [accountChainId, setAccountChainId] = useState<bigint>(0n);
   const { chain } = useNetwork();
-  const [modalOpen, setModalOpen] = useState(false);
 
-  const blockExplorerAddressLink = address
-    ? getBlockExplorerAddressLink(targetNetwork, address)
-    : undefined;
+  const blockExplorerAddressLink = useMemo(() => {
+    return (
+      accountAddress &&
+      getBlockExplorerAddressLink(targetNetwork, accountAddress)
+    );
+  }, [accountAddress, targetNetwork]);
 
-  const handleWalletConnect = () => {
-    setModalOpen(true);
-  };
+  // effect to get chain id and address from account
+  useEffect(() => {
+    if (account) {
+      const getChainId = async () => {
+        const chainId = await account.channel.getChainId();
+        setAccountChainId(BigInt(chainId as string));
+      };
 
-  const handleModalClose = () => {
-    setModalOpen(false);
-  };
+      getChainId();
+    }
+  }, [account]);
 
-  return status == "disconnected" ? (
+  if (status === "disconnected") return <ConnectModal />;
+  // Skip wrong network check if using a fork
+  if (!scaffoldConfig.isFork && accountChainId !== targetNetwork.id) {
+    return <WrongNetworkDropdown />;
+  }
+
+  return (
     <>
-      <Button
-        className="btn btn-primary btn-sm"
-        onClick={handleWalletConnect}
-        type="button"
-      >
-        Connect Wallet
-      </Button>
-      <ConnectModal isOpen={modalOpen} onClose={handleModalClose} />
-    </>
-  ) : chainId !== targetNetwork.id ? (
-    <WrongNetworkDropdown />
-  ) : (
-    <>
-      {/*  <div className="flex flex-col items-center mr-1">
-        <Balance address={address as Address} className="min-h-0 h-auto" />
-        <span className="text-xs" style={{ color: networkColor }}>
+      <div className="flex flex-col items-center max-sm:mt-2">
+        <Balance
+          address={accountAddress as Address}
+          className="h-auto min-h-0"
+        />
+        <span className="ml-1 text-xs" style={{ color: networkColor }}>
           {chain.name}
         </span>
-      </div> */}
+      </div>
       <AddressInfoDropdown
-        address={address as Address}
+        address={accountAddress as Address}
         displayName={""}
         ensAvatar={""}
         blockExplorerAddressLink={blockExplorerAddressLink}
       />
-      {/* <AddressQRCodeModal address={address as Address} modalId="qrcode-modal" /> */}
+      <AddressQRCodeModal
+        address={accountAddress as Address}
+        modalId="qrcode-modal"
+      />
     </>
   );
 };

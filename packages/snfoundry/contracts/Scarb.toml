@@ -1,15 +1,20 @@
 [package]
 name = "contracts"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2023_11"
 
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
 
 [dependencies]
-starknet = ">=2.5.4"
-openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.10.0" }
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.23.0" }
-pragma_lib = { git = "https://github.com/astraly-labs/pragma-lib.git"}
+starknet = "2.9.2"
+# Change to just "openzeppelin" to use full features
+openzeppelin_access = "0.20.0"
+openzeppelin_token = "0.20.0"
+pragma_lib = { git = "https://github.com/astraly-labs/pragma-lib" }
+
+[dev-dependencies]
+openzeppelin_utils = "0.20.0"
+snforge_std = "0.34.0"
 
 [[target.starknet-contract]]
 casm = true
@@ -18,6 +23,11 @@ casm = true
 sort-module-level-items = true
 
 [[tool.snforge.fork]]
-name = "TEST"
-url = "https://rpc.nethermind.io/mainnet-juno/?apikey=Zh5vBpotTbH8DlbCyWqyuQHARB2O5A2gGVck3gzBNXkXlqAP"
-block_id.number = "649020"
+name = "SEPOLIA_LATEST"
+url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_7"
+block_id.tag = "latest"
+
+[[tool.snforge.fork]]
+name = "MAINNET_LATEST"
+url = "https://rpc.nethermind.io/mainnet-juno/rpc/v0_7?apikey=oMHxT9u35pjqgbQ1jrM24Ld11aGfe3Ch3CA80SY9Vm6yZWSLgeuYNS1sW7U37ad5"
+block_id.tag = "latest"

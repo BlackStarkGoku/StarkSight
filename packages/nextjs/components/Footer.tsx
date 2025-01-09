@@ -1,18 +1,12 @@
-import React from "react";
-import Link from "next/link";
-
-import {
-  CurrencyDollarIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline";
-import { HeartIcon } from "@heroicons/react/24/outline";
-import { SwitchTheme } from "~~/components/SwitchTheme";
-import { BuidlGuidlLogo } from "~~/components/assets/BuidlGuidlLogo";
+import { Cog8ToothIcon, CurrencyDollarIcon } from "@heroicons/react/24/outline";
 import { useTargetNetwork } from "~~/hooks/scaffold-stark/useTargetNetwork";
 import { useGlobalState } from "~~/services/store/store";
-import { devnet } from "@starknet-react/chains";
+import { devnet, sepolia, mainnet } from "@starknet-react/chains";
 import { Faucet } from "~~/components/scaffold-stark/Faucet";
-import { getBlockExplorerLink } from "~~/utils/scaffold-stark";
+import { FaucetSepolia } from "~~/components/scaffold-stark/FaucetSepolia";
+import { BlockExplorerSepolia } from "./scaffold-stark/BlockExplorerSepolia";
+import { BlockExplorer } from "./scaffold-stark/BlockExplorer";
+import Link from "next/link";
 
 /**
  * Site footer
@@ -22,50 +16,63 @@ export const Footer = () => {
     (state) => state.nativeCurrencyPrice,
   );
   const { targetNetwork } = useTargetNetwork();
-  const isLocalNetwork = targetNetwork.id === devnet.id;
+
+  // NOTE: workaround - check by name also since in starknet react devnet and sepolia has the same chainId
+  const isLocalNetwork =
+    targetNetwork.id === devnet.id && targetNetwork.network === devnet.network;
+  const isSepoliaNetwork =
+    targetNetwork.id === sepolia.id &&
+    targetNetwork.network === sepolia.network;
+  const isMainnetNetwork =
+    targetNetwork.id === mainnet.id &&
+    targetNetwork.network === mainnet.network;
 
   return (
-    <div className="min-h-0 py-5 px-1 mb-11 lg:mb-0">
+    <div className="mb-11 min-h-0 bg-base-100 px-1 py-5 lg:mb-0">
       <div>
-        <div className="fixed flex justify-between items-center w-full z-10 p-4 bottom-0 left-0 pointer-events-none">
-          <div className="flex flex-col md:flex-row gap-2 pointer-events-auto">
-            {nativeCurrencyPrice > 0 && (
-              <div>
-                <div className="btn btn-primary btn-sm font-normal gap-1 cursor-auto">
-                  <CurrencyDollarIcon className="h-4 w-4" />
-                  <span>{nativeCurrencyPrice}</span>
-                </div>
-              </div>
+        <div className="pointer-events-none fixed bottom-0 left-0 z-10 flex w-full items-center justify-between p-4">
+          <div className="pointer-events-auto flex flex-col gap-2 md:flex-row">
+            {isSepoliaNetwork && (
+              <>
+                <FaucetSepolia />
+                <BlockExplorerSepolia />
+              </>
             )}
             {isLocalNetwork && (
               <>
                 <Faucet />
-                <Link
-                  href={getBlockExplorerLink(targetNetwork)}
-                  target={"_blank"}
-                  rel={"noopener noreferrer"}
-                  passHref
-                  className="btn btn-primary btn-sm font-normal gap-1"
-                >
-                  <MagnifyingGlassIcon className="h-4 w-4" />
-                  <span>Block Explorer</span>
-                </Link>
               </>
             )}
+            {isMainnetNetwork && (
+              <>
+                <BlockExplorer />
+              </>
+            )}
+            <Link
+              href={"/configure"}
+              passHref
+              className="btn btn-sm cursor-pointer gap-1 border border-[#32BAC4] font-normal shadow-none"
+            >
+              <Cog8ToothIcon className="h-4 w-4 text-[#32BAC4]" />
+              <span>Configure Contracts</span>
+            </Link>
+            {nativeCurrencyPrice > 0 && (
+              <div>
+                <div className="btn btn-sm cursor-auto gap-1 border border-[#32BAC4] font-normal shadow-none">
+                  <CurrencyDollarIcon className="h-4 w-4 text-[#32BAC4]" />
+                  <span>{nativeCurrencyPrice}</span>
+                </div>
+              </div>
+            )}
           </div>
-          <SwitchTheme
-            className={`pointer-events-auto ${
-              isLocalNetwork ? "self-end md:self-auto" : ""
-            }`}
-          />
         </div>
       </div>
       <div className="w-full">
         <ul className="menu menu-horizontal w-full">
-          <div className="flex justify-center items-center gap-2 text-sm w-full">
+          <div className="flex w-full items-center justify-center gap-2 text-sm">
             <div className="text-center">
               <a
-                href="https://github.com/Quantum3-Labs/scaffold-stark-2"
+                href="https://github.com/Scaffold-Stark/scaffold-stark-2"
                 target="_blank"
                 rel="noreferrer"
                 className="link"
@@ -73,32 +80,7 @@ export const Footer = () => {
                 Fork me
               </a>
             </div>
-            <span>·</span>
-            <div className="flex justify-center items-center gap-2">
-              <p className="m-0 text-center">
-                Built with <HeartIcon className="inline-block h-4 w-4" /> by
-              </p>
-              <a
-                className="flex justify-center items-center gap-1"
-                href="https://quantum3labs.com/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <BuidlGuidlLogo className="w-3 h-5 pb-1" />
-                <span className="link">Q3 Labs</span>
-              </a>
-              <p className="m-0 text-center">at</p>
-              <a
-                className="flex justify-center items-center gap-1"
-                href="https://buidlguidl.com/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <BuidlGuidlLogo className="w-3 h-5 pb-1" />
-                <span className="link">BuidlGuidl</span>
-              </a>
-            </div>
-            <span>·</span>
+
             <div className="text-center">
               <a
                 href="https://t.me/+wO3PtlRAreo4MDI9"

@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
-import { useAccount } from "@starknet-react/core";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bars3Icon, BugAntIcon } from "@heroicons/react/24/outline";
 import { useOutsideClick } from "~~/hooks/scaffold-stark";
 import { CustomConnectButton } from "~~/components/scaffold-stark/CustomConnectButton";
-import { FaucetButton } from "~~/components/scaffold-stark/FaucetButton";
-
-import ConnectModal from "./scaffold-stark/CustomConnectButton/ConnectModal";
-import { Button } from "~~/app/Uikit/components/ui/button";
+import { useTheme } from "next-themes";
+import { useTargetNetwork } from "~~/hooks/scaffold-stark/useTargetNetwork";
+import { devnet } from "@starknet-react/chains";
+import { SwitchTheme } from "./SwitchTheme";
+import { useAccount, useNetwork, useProvider } from "@starknet-react/core";
+import { BlockIdentifier } from "starknet";
 
 type HeaderMenuLink = {
   label: string;
@@ -33,7 +34,12 @@ export const menuLinks: HeaderMenuLink[] = [
 
 export const HeaderMenuLinks = () => {
   const pathname = usePathname();
+  const { theme } = useTheme();
+  const [isDark, setIsDark] = useState(false);
 
+  useEffect(() => {
+    setIsDark(theme === "dark");
+  }, [theme]);
   return (
     <>
       {menuLinks.map(({ label, href, icon }) => {
@@ -44,8 +50,10 @@ export const HeaderMenuLinks = () => {
               href={href}
               passHref
               className={`${
-                isActive ? "bg-secondary shadow-md" : ""
-              } hover:bg-secondary hover:shadow-md focus:!bg-secondary active:!text-neutral py-1.5 px-3 text-sm rounded-full gap-2 grid grid-flow-col`}
+                isActive
+                  ? "!bg-gradient-nav active:bg-gradient-nav !text-white shadow-md"
+                  : ""
+              } hover:bg-gradient-nav grid grid-flow-col gap-2 rounded-full px-3 py-1.5 text-sm hover:text-white`}
             >
               {icon}
               <span>{label}</span>
@@ -61,40 +69,114 @@ export const HeaderMenuLinks = () => {
  * Site header
  */
 export const Header = () => {
-  const { address, status, chainId, ...props } = useAccount();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const burgerMenuRef = useRef<HTMLDivElement>(null);
+
   useOutsideClick(
+    //@ts-expect-error refs are supposed to be null by default
     burgerMenuRef,
     useCallback(() => setIsDrawerOpen(false), []),
   );
 
-  return (
-    <div className="sticky flex lg:static top-0 navbar bg-background border-b border-border min-h-0 flex-shrink-0 justify-between z-20 shadow-md px-6 h-16 items-center">
-      <div className="flex justify-center items-center">
-        <Link href={"/"}>
-          <Image
-            src={"/starksight-green.png"}
-            alt={"starksight"}
-            width={250}
-            height={60}
-          />
-        </Link>
-        {status !== "disconnected" ? (
-          <Link href={"/bets"}>
-            <Button variant={"ghost"} className="text-end">
-              My bets
-            </Button>
-          </Link>
-        ) : null}
-        <Link href={"/crash"}>
-          <Button variant={"ghost"} className="text-end">
-            Crash game
-          </Button>
-        </Link>
-      </div>
+  const { targetNetwork } = useTargetNetwork();
+  const isLocalNetwork = targetNetwork.network === devnet.network;
 
-      <CustomConnectButton />
+  const { provider } = useProvider();
+  const { address, status, chainId } = useAccount();
+  const { chain } = useNetwork();
+  const [isDeployed, setIsDeployed] = useState(true);
+
+  useEffect(() => {
+    if (
+      status === "connected" &&
+      address &&
+      chainId === targetNetwork.id &&
+      chain.network === targetNetwork.network
+    ) {
+      provider
+        .getClassHashAt(address)
+        .then((classHash) => {
+          if (classHash) setIsDeployed(true);
+          else setIsDeployed(false);
+        })
+        .catch((e) => {
+          console.error("contreact cehc", e);
+          if (e.toString().includes("Contract not found")) {
+            setIsDeployed(false);
+          }
+        });
+    }
+  }, [
+    status,
+    address,
+    provider,
+    chainId,
+    targetNetwork.id,
+    targetNetwork.network,
+    chain.network,
+  ]);
+
+  return (
+    <div className="navbar top-0 z-20 min-h-0 flex-shrink-0 justify-between px-0 sm:px-2 lg:static">
+      <div className="navbar-start -mr-2 w-auto lg:w-1/2">
+        <div className="dropdown lg:hidden" ref={burgerMenuRef}>
+          <label
+            tabIndex={0}
+            className={`btn btn-ghost ml-1 [@media(max-width:379px)]:!h-9 [@media(max-width:379px)]:!min-h-0 [@media(max-width:379px)]:!w-10 [@media(max-width:379px)]:!px-3 [@media(max-width:379px)]:!py-1 ${isDrawerOpen ? "hover:bg-secondary" : "hover:bg-transparent"}`}
+            onClick={() => {
+              setIsDrawerOpen((prevIsOpenState) => !prevIsOpenState);
+            }}
+          >
+            <Bars3Icon className="h-1/2" />
+          </label>
+          {isDrawerOpen && (
+            <ul
+              tabIndex={0}
+              className="menu-compact menu dropdown-content mt-3 w-52 rounded-box bg-base-100 p-2 shadow"
+              onClick={() => {
+                setIsDrawerOpen(false);
+              }}
+            >
+              <HeaderMenuLinks />
+            </ul>
+          )}
+        </div>
+        <Link
+          href="/"
+          passHref
+          className="ml-4 mr-6 hidden shrink-0 items-center gap-2 lg:flex"
+        >
+          <div className="relative flex h-10 w-10">
+            <Image
+              alt="SE2 logo"
+              className="cursor-pointer"
+              fill
+              src="/logo.svg"
+            />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-bold leading-tight">Scaffold-Stark</span>
+            <span className="text-xs">Starknet dev stack</span>
+          </div>
+        </Link>
+        <ul className="menu menu-horizontal hidden gap-2 px-1 lg:flex lg:flex-nowrap">
+          <HeaderMenuLinks />
+        </ul>
+      </div>
+      <div className="navbar-end mr-2 flex-grow gap-4">
+        {status === "connected" && !isDeployed ? (
+          <span className="bg-[#8a45fc] p-1 text-[9px] text-white">
+            Wallet Not Deployed
+          </span>
+        ) : null}
+        <CustomConnectButton />
+        {/* <FaucetButton /> */}
+        <SwitchTheme
+          className={`pointer-events-auto ${
+            isLocalNetwork ? "mb-1 lg:mb-0" : ""
+          }`}
+        />
+      </div>
     </div>
   );
 };

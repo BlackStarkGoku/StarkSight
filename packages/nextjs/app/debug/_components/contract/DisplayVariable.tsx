@@ -7,9 +7,10 @@ import { useAnimationConfig } from "~~/hooks/scaffold-stark";
 import { AbiFunction } from "~~/utils/scaffold-stark/contract";
 import { Abi } from "abi-wan-kanabi";
 import { Address } from "@starknet-react/chains";
-import { useContractRead } from "@starknet-react/core";
+import { useReadContract } from "@starknet-react/core";
 import { BlockNumber } from "starknet";
-import { displayTxResult } from "./utilsDisplay";
+import { decodeContractResponse } from "./utilsDisplay";
+import { useTheme } from "next-themes";
 
 type DisplayVariableProps = {
   contractAddress: Address;
@@ -30,7 +31,8 @@ export const DisplayVariable = ({
     isLoading,
     isFetching,
     refetch,
-  } = useContractRead({
+    error,
+  } = useReadContract({
     address: contractAddress,
     functionName: abiFunction.name,
     abi: [...abi],
@@ -38,6 +40,16 @@ export const DisplayVariable = ({
   });
 
   const { showAnimation } = useAnimationConfig(result);
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
+
+  // error logging
+  useEffect(() => {
+    if (error) {
+      console.error(error?.message);
+      console.error(error.stack);
+    }
+  }, [error]);
 
   useEffect(() => {
     refetch();
@@ -46,7 +58,11 @@ export const DisplayVariable = ({
   return (
     <div className="space-y-1 pb-2">
       <div className="flex items-center">
-        <h3 className="font-medium text-lg mb-0 break-all">
+        <h3
+          className={`mb-0 break-all text-lg font-medium ${
+            isDarkMode ? "text-[#4DB4FF]" : "text-[#7800FF]"
+          }`}
+        >
           {abiFunction.name}
         </h3>
         <button
@@ -64,14 +80,20 @@ export const DisplayVariable = ({
         </button>
         {/* <InheritanceTooltip inheritedFrom={inheritedFrom} /> */}
       </div>
-      <div className="text-gray-500 font-medium flex flex-col items-start">
+      <div className="flex flex-col items-start font-medium text-neutral">
         <div>
           <div
-            className={`break-all block transition bg-transparent ${
-              showAnimation ? "bg-warning rounded-sm animate-pulse-fast" : ""
+            className={`block break-all bg-transparent transition ${
+              showAnimation ? "animate-pulse-fast rounded-sm bg-warning" : ""
             }`}
           >
-            {displayTxResult(result, false, abiFunction?.outputs)}
+            {decodeContractResponse({
+              resp: result,
+              abi,
+              functionOutputs: abiFunction?.outputs,
+              asText: true,
+              showAsString: false,
+            })}
           </div>
         </div>
       </div>

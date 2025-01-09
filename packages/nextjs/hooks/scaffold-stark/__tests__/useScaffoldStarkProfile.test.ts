@@ -118,6 +118,7 @@ describe("useScaffoldStarkProfile", () => {
   it("should skip profile fetch if shouldUseProfile returns false", async () => {
     // Override the network to a non-supported network for this test
     vi.spyOn(scaffoldConfig, "targetNetworks", "get").mockReturnValue([
+      /* @ts-ignore */
       {
         // @ts-ignore
         network: "testnet",

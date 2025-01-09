@@ -1,8 +1,5 @@
 "use client";
-import MyBets from "./MyBets";
 import { useAccount } from "@starknet-react/core";
-import MyCryptoBets from "./MyCryptoBets";
-import { useScaffoldEventHistory } from "~~/hooks/scaffold-stark/useScaffoldEventHistory";
 import {
   Alert,
   AlertDescription,

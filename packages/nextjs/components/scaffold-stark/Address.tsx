@@ -16,7 +16,6 @@ import { BlockieAvatar } from "~~/components/scaffold-stark/BlockieAvatar";
 import { useScaffoldStarkProfile } from "~~/hooks/scaffold-stark/useScaffoldStarkProfile";
 import { getStarknetPFPIfExists } from "~~/utils/profile";
 import { default as NextImage } from "next/image";
-import ConnectModal from "./CustomConnectButton/ConnectModal";
 
 type AddressProps = {
   address?: AddressType;

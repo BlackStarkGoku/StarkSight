@@ -53,8 +53,9 @@ type ConfiguredChainId =
   (typeof scaffoldConfig)["targetNetworks"][0]["network"];
 export type InheritedFunctions = { readonly [key: string]: string };
 
+// @ts-ignore
 type Contracts = ContractsDeclaration[ConfiguredChainId];
-export type ContractName = keyof Contracts;
+export type ContractName = string;
 export type Contract<TContractName extends ContractName> =
   Contracts[TContractName];
 

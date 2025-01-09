@@ -16,6 +16,7 @@ export const useDeployedContractInfo = <TContractName extends ContractName>(
   const isMounted = useIsMounted();
   const { targetNetwork } = useTargetNetwork();
   const deployedContract = contracts?.[targetNetwork.network]?.[
+    // @ts-ignore
     contractName as ContractName
   ] as Contract<TContractName>;
   const [status, setStatus] = useState<ContractCodeStatus>(

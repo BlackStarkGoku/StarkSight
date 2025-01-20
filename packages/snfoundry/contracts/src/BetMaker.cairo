@@ -1,5 +1,5 @@
 use openzeppelin_token::erc20::interface::{IERC20Dispatcher};
-use starknet::{ContractAddress, eth_address::EthAddress};
+use starknet::{ContractAddress, eth_address::EthAddress, ClassHash};
 
 
 // Nimbora structs and interface
@@ -228,13 +228,18 @@ pub trait IBetMaker<TContractState> {
     fn get_oracle_crypto_price(self: @TContractState, asset_key: felt252) -> u128;
     fn set_vault_wallet(ref self: TContractState, wallet: ContractAddress);
 
-    fn retreive_contract_assets(
-        ref self: TContractState, amount: u256, token: ERC20BetTokenType,
-    ); // For tests in mainnet
+
+    fn deposit_contract_eth(ref self: TContractState, amount: u256);
+
+    fn retreive_contract_eth(ref self: TContractState, amount: u256); // For tests in mainnet
+
+    fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }
 
 #[starknet::contract]
 mod BetMaker {
+    use openzeppelin_upgrades::UpgradeableComponent;
+    use openzeppelin_upgrades::interface::IUpgradeable;
     use contracts::PragmaComponent::IPragmaComponent;
     use contracts::PragmaComponent::PragmaComponent;
     use openzeppelin_access::ownable::OwnableComponent;
@@ -242,7 +247,7 @@ mod BetMaker {
     use pragma_lib::types::{DataType};
     // use starknet::contract_address::contract_address_const;
     use starknet::storage::Map;
-    use starknet::{ContractAddress};
+    use starknet::{ContractAddress, contract_address_const, ClassHash};
     use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
     use super::{
         BetType, CreateBetOutcomesArgument, CryptoBet, ERC20BetToken, ERC20BetTokenType, IBetMaker,
@@ -252,18 +257,26 @@ mod BetMaker {
     use super::{ITokenManagerDispatcher, ITokenManagerDispatcherTrait};
 
     const PROCESSING_FEE: u256 = 2;
+    const ETH_CONTRACT_ADDRESS: felt252 =
+        0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: PragmaComponent, storage: pragma, event: PragmaComponentEvent);
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
     #[abi(embed_v0)]
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
+    /// Upgradeable
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+
 
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
@@ -306,6 +319,8 @@ mod BetMaker {
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         pragma: PragmaComponent::Storage,
+        #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage,
     }
 
     #[constructor]
@@ -453,8 +468,8 @@ mod BetMaker {
                         .unwrap(); // TODO: Not necessary when u64 will be used for vote_deadline
 
                     assert!(bet_data.is_active, "Bet is not active.");
-                    assert!(get_block_timestamp() < converted_deadline, "Bet has expired.");
-                    assert!(get_block_timestamp() < converted_vote_deadline, "Votes are closed.");
+                    //assert!(get_block_timestamp() < converted_deadline, "Bet has expired.");
+                    //assert!(get_block_timestamp() < converted_vote_deadline, "Votes are closed.");
 
                     bet_data
                         .bet_token
@@ -616,6 +631,33 @@ mod BetMaker {
                     bet_data.winner_outcome = Option::Some(bet_data.outcomes.outcome_no);
                 },
             }
+
+            match bet_data.yield_strategy {
+                YieldStrategy::Nimbora(mut yield_strategy_infos) => {
+                    if yield_strategy_infos.shares > 0 {
+                        let nimbora_dispatcher = ITokenManagerDispatcher {
+                            contract_address: yield_strategy_infos.address,
+                        };
+                        nimbora_dispatcher.request_withdrawal(yield_strategy_infos.shares);
+
+                        match bet_data.winner_outcome {
+                            Option::Some(outcome) => {
+                                let mut winner_outcome = outcome;
+                                winner_outcome
+                                    .bought_amount_with_yield = nimbora_dispatcher
+                                    .convert_to_assets(yield_strategy_infos.shares);
+                                bet_data.winner_outcome = Option::Some(winner_outcome);
+                            },
+                            Option::None => {},
+                        }
+
+                        yield_strategy_infos.shares = 0;
+                        bet_data.yield_strategy = YieldStrategy::Nimbora(yield_strategy_infos);
+                    }
+                },
+                _ => {},
+            }
+
             self.crypto_bets.write(bet_id, bet_data);
             let new_bet = self.crypto_bets.read(bet_id);
             self.emit(CryptoBetSettled { market: new_bet });
@@ -792,20 +834,35 @@ mod BetMaker {
             self.vault_wallet.write(wallet);
         }
 
-        fn retreive_contract_assets(
-            ref self: ContractState, amount: u256, token: ERC20BetTokenType,
-        ) {
+
+        fn deposit_contract_eth(ref self: ContractState, amount: u256) {
             self.ownable.assert_only_owner();
-            let bet_token = match token {
-                ERC20BetTokenType::Eth(address) => ERC20BetToken {
-                    name: 'Eth', dispatcher: IERC20Dispatcher { contract_address: address },
-                },
-                ERC20BetTokenType::Usdc(address) => ERC20BetToken {
-                    name: 'Usdc', dispatcher: IERC20Dispatcher { contract_address: address },
-                },
+
+            let eth_contract_address = contract_address_const::<ETH_CONTRACT_ADDRESS>();
+            let bet_token = ERC20BetToken {
+                name: 'Eth',
+                dispatcher: IERC20Dispatcher { contract_address: eth_contract_address },
             };
 
+            bet_token
+                .dispatcher
+                .transfer_from(get_caller_address(), get_contract_address(), amount);
+        }
+
+        fn retreive_contract_eth(ref self: ContractState, amount: u256) {
+            self.ownable.assert_only_owner();
+            let eth_contract_address = contract_address_const::<ETH_CONTRACT_ADDRESS>();
+            let bet_token = ERC20BetToken {
+                name: 'Eth',
+                dispatcher: IERC20Dispatcher { contract_address: eth_contract_address },
+            };
             bet_token.dispatcher.transfer(get_caller_address(), amount);
+        }
+
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            self.ownable.assert_only_owner();
+
+            self.upgradeable.upgrade(new_class_hash);
         }
     }
 }

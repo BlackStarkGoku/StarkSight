@@ -197,6 +197,7 @@ fn test_fetch_oracle_crypto_price() {
 
     let dispatcher = IBetMakerDispatcher { contract_address };
     assert(dispatcher.get_oracle_crypto_price('BTC/USD') != 0, 'Oracle not working');
+    assert(dispatcher.get_oracle_crypto_price('ETH/USD') != 0, 'Oracle not working');
 }
 
 #[test]
@@ -329,4 +330,33 @@ fn test_claim_crypto_nimbora_bet() {
     dispatcher.claim_rewards(1, BetType::Crypto, 1);
 
     assert(eth_dispatcher.balance_of(contract_address) == 87, 'Wrong amount claimed by user');
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn test_deposit_and_retreive_assets() {
+    let contract_address = deploy_contract("BetMaker");
+    let betmaker_dispatcher = IBetMakerDispatcher { contract_address };
+
+    let eth_dispatcher = IERC20Dispatcher { contract_address: ETH_CONTRACT_ADDRESS() };
+
+    let amount_to_transfer = 500;
+    cheat_caller_address(ETH_CONTRACT_ADDRESS(), OWNER(), CheatSpan::TargetCalls(1));
+    eth_dispatcher.approve(contract_address, amount_to_transfer);
+    let approved_amount = eth_dispatcher.allowance(OWNER(), contract_address);
+    assert(approved_amount == amount_to_transfer, 'Not the right amount approved');
+
+    // deposit tests
+    assert(eth_dispatcher.balance_of(contract_address) == 0, 'Contract should have 0');
+    cheat_caller_address(contract_address, OWNER(), CheatSpan::TargetCalls(1));
+    betmaker_dispatcher.deposit_contract_eth(amount_to_transfer);
+    assert(
+        eth_dispatcher.balance_of(contract_address) == amount_to_transfer,
+        'Contract should have 500',
+    );
+
+    // retreive tests
+    cheat_caller_address(contract_address, OWNER(), CheatSpan::TargetCalls(1));
+    betmaker_dispatcher.retreive_contract_eth(260);
+    assert(eth_dispatcher.balance_of(contract_address) == 240, 'Contract should have 240');
 }

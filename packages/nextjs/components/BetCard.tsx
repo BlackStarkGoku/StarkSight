@@ -180,7 +180,7 @@ function BetCard({ bet }: { bet: Bet }) {
 
       return nimboraApr;
     } */
-    return 22;
+    return 15;
   }, [bet.yield_strategy]);
 
   return (

@@ -1,5 +1,5 @@
 use openzeppelin_token::erc20::interface::{IERC20Dispatcher};
-use starknet::{ContractAddress, eth_address::EthAddress, ClassHash};
+use starknet::{ClassHash, ContractAddress, eth_address::EthAddress};
 
 
 // Nimbora structs and interface
@@ -238,16 +238,16 @@ pub trait IBetMaker<TContractState> {
 
 #[starknet::contract]
 mod BetMaker {
-    use openzeppelin_upgrades::UpgradeableComponent;
-    use openzeppelin_upgrades::interface::IUpgradeable;
     use contracts::PragmaComponent::IPragmaComponent;
     use contracts::PragmaComponent::PragmaComponent;
     use openzeppelin_access::ownable::OwnableComponent;
     use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use openzeppelin_upgrades::UpgradeableComponent;
+    use openzeppelin_upgrades::interface::IUpgradeable;
     use pragma_lib::types::{DataType};
     // use starknet::contract_address::contract_address_const;
     use starknet::storage::Map;
-    use starknet::{ContractAddress, contract_address_const, ClassHash};
+    use starknet::{ClassHash, ContractAddress, contract_address_const};
     use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
     use super::{
         BetType, CreateBetOutcomesArgument, CryptoBet, ERC20BetToken, ERC20BetTokenType, IBetMaker,

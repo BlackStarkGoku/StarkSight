@@ -17,7 +17,7 @@ export type ScaffoldConfig = {
 };
 
 const scaffoldConfig = {
-  targetNetworks: [chains.mainnet],
+  targetNetworks: [chains.mainnetFork],
   // Only show the Burner Wallet when running on devnet
   onlyLocalBurnerWallet: false,
   rpcProviderUrl: process.env.NEXT_PUBLIC_PROVIDER_URL || "",
@@ -36,7 +36,7 @@ const scaffoldConfig = {
    * This will prevent showing the wrong network dropdown when the chainId matches
    * but the RPC URL is different (e.g., when using a local fork of mainnet)
    */
-  isFork: false,
+  isFork: true,
 } as const satisfies ScaffoldConfig;
 
 export default scaffoldConfig;

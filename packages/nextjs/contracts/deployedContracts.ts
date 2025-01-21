@@ -896,7 +896,7 @@ const deployedContracts = {
   mainnet: {
     BetMaker: {
       address:
-        "0x3e907b218551c9da6824a0a14f863897ff1357e0c502a002056dbb1e73eae62",
+        "0x41ab39c7862d4eb47f8a77f46303a4aed63061f2bffa1130f0ab66935223278",
       abi: [
         {
           type: "impl",
@@ -1779,7 +1779,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x693392b5a644c4aa462d86a03d9b2b6d4f294412ccc56441ad5860e7fbea6c7",
+        "0x6fd848f25b300ccb2ad7eb1ec2a3642e9cbc8b8ebd11d52aa36c3a93d9ceabe",
     },
   },
 } as const;

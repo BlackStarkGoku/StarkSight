@@ -32,7 +32,7 @@ export const movingCardItems: {
     quote: "Sports Bets",
     image: (
       <Image
-        src={"/sports.png"}
+        src={"/foot.jpg"}
         alt={"bitcoin"}
         width={626}
         height={432}
@@ -80,7 +80,7 @@ export const movingCardItems: {
     quote: "Sports Bets",
     image: (
       <Image
-        src={"/sports.png"}
+        src={"/foot.jpg"}
         alt={"bitcoin"}
         width={626}
         height={432}

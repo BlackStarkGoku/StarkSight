@@ -468,8 +468,8 @@ mod BetMaker {
                         .unwrap(); // TODO: Not necessary when u64 will be used for vote_deadline
 
                     assert!(bet_data.is_active, "Bet is not active.");
-                    //assert!(get_block_timestamp() < converted_deadline, "Bet has expired.");
-                    //assert!(get_block_timestamp() < converted_vote_deadline, "Votes are closed.");
+                    assert!(get_block_timestamp() < converted_deadline, "Bet has expired.");
+                    assert!(get_block_timestamp() < converted_vote_deadline, "Votes are closed.");
 
                     bet_data
                         .bet_token
@@ -623,11 +623,23 @@ mod BetMaker {
             bet_data.is_settled = true;
             bet_data.is_active = false;
 
+            let previous_amount_with_yield = match bet_data.winner_outcome {
+                Option::Some(outcome) => { outcome.bought_amount_with_yield },
+                Option::None => { 0 },
+            };
             match winner_type {
                 PositionType::Yes => {
+                    bet_data
+                        .outcomes
+                        .outcome_yes
+                        .bought_amount_with_yield = previous_amount_with_yield;
                     bet_data.winner_outcome = Option::Some(bet_data.outcomes.outcome_yes);
                 },
                 PositionType::No => {
+                    bet_data
+                        .outcomes
+                        .outcome_no
+                        .bought_amount_with_yield = previous_amount_with_yield;
                     bet_data.winner_outcome = Option::Some(bet_data.outcomes.outcome_no);
                 },
             }

@@ -7,7 +7,7 @@
 <!-- prettier-ignore-end -->
 
 <h4 align="center">
-  <a href="www.starksight.app">starksight.app</a>
+  <a href="https://www.starksight.app">starksight.app</a>
 </h4>
 
 # Starksight
